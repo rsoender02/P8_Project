@@ -91,6 +91,7 @@ CAR_plot <- ggplot(epsilon_hat_ev, aes(x = date, y = CAR * 100)) +
   geom_line(color = "#211A52", size = 1.2) +
   geom_vline(xintercept = as.numeric(event_date), linetype = "dashed", color = "#cc445b") +
   labs(x = "Date", y = "Cumulative abnormal return (%)") +
+  scale_x_date(date_labels = "%d %b") +
   theme_minimal()
 
 ggsave("CAR_plot.png", plot = CAR_plot, width = 10, height = 4, dpi = 300)
@@ -133,8 +134,9 @@ for (i in (seq_along(end_dates))) {
   eps_ev <- data_ev$return - X_ev * theta_hat
 
   # Variance–covariance of eps_ev
+  X <- rep(1, length(data_ref$return))
   V <- sigma2_hat * (diag(length(X_ev)) +
-    X_ev %*% solve(t(X_ev) %*% X_ev) %*% t(X_ev))
+    X_ev %*% solve(t(X) %*% X) %*% t(X_ev))
 
   # CAR and SCAR
   gamma <- rep(1, nrow(V))
@@ -195,10 +197,11 @@ for (i in seq_along(step_dates)) {
 
   # residuals on this window
   X_ev <- rep(1, length(ev$return))
-  eps_ev <- as.vector(ev$return - X_ev %*% theta_hat)
+  eps_ev <- as.vector(ev$return - X_ev * theta_hat)
 
   # invertible XtX or fallback
-  XtX <- t(X_ev) %*% X_ev
+  X <- rep(1, length(data_ref$return))
+  XtX <- t(X) %*% X
   invX <- tryCatch(
     solve(XtX),
     error = function(e) ginv(XtX)
@@ -257,7 +260,6 @@ p_value <- 2 * (1 - pnorm(abs(SCAR_hat)))
 p_value
 
 
-
 # CAR plot, market model
 data_ev <- data %>%
   filter(date >= "2024-11-05" & date <= "2024-11-14")
@@ -276,6 +278,7 @@ CAR_plot <- ggplot(epsilon_hat_ev, aes(x = date, y = CAR * 100)) +
   geom_line(color = "#211A52", size = 1.2) +
   geom_vline(xintercept = as.numeric(event_date), linetype = "dashed", color = "#cc445b") +
   labs(x = "Date", y = "Cumulative abnormal return (%)") +
+  scale_x_date(date_labels = "%d %b") +
   theme_minimal()
 
 ggsave("CAR_plot.png", plot = CAR_plot, width = 10, height = 4, dpi = 300)
@@ -320,13 +323,14 @@ for (i in (seq_along(end_dates))) {
   # Design matrix and residuals for the ev window
   X_ev <- cbind(1, market_ev$return)
   eps_ev <- data_ev$return - X_ev %*% theta_hat
+  X <- cbind(1, data_market_ref$return)
 
   # Variance–covariance of eps_ev
   if (this_end == ev_start) {
     V <- sigma2_hat * (diag(nrow(X_ev)))
   } else {
     V <- sigma2_hat * (diag(nrow(X_ev)) +
-      X_ev %*% solve(t(X_ev) %*% X_ev) %*% t(X_ev))
+      X_ev %*% solve(t(X) %*% X) %*% t(X_ev))
   }
 
   # CAR and SCAR
@@ -396,7 +400,8 @@ for (i in seq_along(step_dates)) {
   eps_ev <- as.vector(ev$return - X_ev %*% theta_hat)
 
   # invertible XtX or fallback
-  XtX <- t(X_ev) %*% X_ev
+  X <- cbind(1, mkt_ref$return)
+  XtX <- t(X) %*% X
   invX <- tryCatch(
     solve(XtX),
     error = function(e) ginv(XtX)
@@ -415,8 +420,7 @@ for (i in seq_along(step_dates)) {
   results$SCAR[i] <- SCAR_val
   results$p_value[i] <- p_val
 }
-2 * (1 - pnorm(abs(3.2235)))
-
+print(results)
 write.csv(results, file = "bitcoin_eventstudy_results_market1day.csv", row.names = FALSE)
 
 

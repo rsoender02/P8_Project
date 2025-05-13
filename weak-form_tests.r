@@ -81,6 +81,8 @@ variance_ratio_test <- function(prices, q) {
     )
 }
 
+variance_ratio_test(prices, floor(log(length(prices))))
+
 # Bartels RVN test for randomness
 n <- length(returns)
 ranks <- rank(returns) # Compute ranks of the observations
@@ -108,8 +110,6 @@ list(RVN = RVN, p_value = beta_p_value)
 
 
 
-data <- read.csv("R/data/btc_prices.csv")
-
 
 data_before <- data[data$date >= as.Date("2024-10-06") & data$date <= as.Date("2024-11-05"), ]
 data_during <- data[data$date >= as.Date("2024-11-06") & data$date <= as.Date("2024-12-05"), ]
@@ -117,13 +117,212 @@ data_after <- data[data$date >= as.Date("2024-12-06") & data$date <= as.Date("20
 
 
 
-returns <- diff(log(data_before$close))
-adf.test(returns)
-returns <- diff(log(data_during$close))
-adf.test(returns)
-returns <- diff(log(data_after$close))
-adf.test(returns)
 
-variance_ratio_test(data_after$close, 3)
 
-variance_ratio_test(subset(data, date >= as.Date("2024-12-06") & date <= as.Date("2025-01-05"))$close, 3)
+
+
+
+
+# Loop through each year
+for (i in 2015:2024) {
+    year_str <- as.character(i)
+
+    # Subset data for the year
+    data_list[[year_str]] <- subset(data, date >= as.Date(paste0(i, "-01-01")) & date <= as.Date(paste0(i, "-12-31")))
+
+    if (nrow(data_list[[year_str]]) > 1) {
+        data_list[[year_str]]$return <- c(NA, diff(log(data_list[[year_str]]$close)))
+        returns <- na.omit(data_list[[year_str]]$return)
+
+        # Perform Tests
+        test_results[[year_str]] <- list(
+            Ljung_Box = Box.test(returns, lag = min(floor(log(length(returns))), length(returns) - 1), type = "Ljung-Box", fitdf = 0),
+            Auto_Q = tryCatch(Auto.Q(returns), error = function(e) NA),
+            ADF = adf.test(returns),
+            KPSS = kpss.test(returns, null = "Trend", lshort = TRUE),
+            Variance_Ratio = variance_ratio_test(data_list[[year_str]]$close, 5),
+            Runs_Test = runs.test(factor(returns > mean(returns))),
+            Bartels_Test = BartelsRankTest(returns, alternative = "two.sided", method = "normal"),
+            Hurst_Exponent = tryCatch(hurstexp(returns), error = function(e) NA),
+            Auto_VR_Test = tryCatch(
+                {
+                    vr_stat <- Auto.VR(returns)$stat
+                    list(stat = vr_stat, p_value = pnorm(vr_stat, lower.tail = FALSE))
+                },
+                error = function(e) list(stat = NA, p_value = NA)
+            )
+        )
+    } else {
+        test_results[[year_str]] <- NA # If not enough data, store NA
+    }
+}
+
+
+# Initialize an empty list to store p-values
+p_values_list <- list()
+
+# Loop through each year and extract p-values
+for (i in 2015:2024) {
+    year_str <- as.character(i)
+
+    if (!is.null(test_results[[year_str]]) && is.list(test_results[[year_str]])) {
+        p_values_list[[year_str]] <- c(
+            Ljung_Box = test_results[[year_str]]$Ljung_Box$p.value,
+            Auto_Q = test_results[[year_str]]$Auto_Q$Pvalue,
+            ADF = test_results[[year_str]]$ADF$p.value,
+            KPSS = test_results[[year_str]]$KPSS$p.value,
+            Variance_Ratio = test_results[[year_str]]$Variance_Ratio$p_value,
+            Runs_Test = test_results[[year_str]]$Runs_Test$p.value,
+            Bartels_Test = test_results[[year_str]]$Bartels_Test$p.value,
+            Hurst_Exponent = test_results[[year_str]]$Hurst_Exponent$Hs,
+            Auto_VR_Test = test_results[[year_str]]$Auto_VR_Test$p_value
+        )
+    } else {
+        # If no data for the year, store NA
+        p_values_list[[year_str]] <- rep(NA, 9)
+    }
+}
+
+# Convert the list to a dataframe
+p_values_df <- as.data.frame(do.call(rbind, p_values_list))
+
+# Set row names as years
+rownames(p_values_df) <- names(p_values_list)
+
+# Print the final dataframe
+print(p_values_df["2020", ])
+
+write.csv(p_values_df, file = "bitcoin_p_values_yearly.csv", row.names = TRUE)
+
+p_values_df
+
+
+
+
+# Initialize an empty list to store test statistics
+test_statistic_list <- list()
+
+# Loop through each year and extract test statistics
+for (i in 2015:2024) {
+    year_str <- as.character(i)
+
+    if (!is.null(test_results[[year_str]]) && is.list(test_results[[year_str]])) {
+        test_statistic_list[[year_str]] <- c(
+            Ljung_Box = test_results[[year_str]]$Ljung_Box$statistic,
+            Auto_Q = test_results[[year_str]]$Auto_Q$Stat,
+            ADF = test_results[[year_str]]$ADF$statistic,
+            KPSS = test_results[[year_str]]$KPSS$statistic,
+            Variance_Ratio = test_results[[year_str]]$Variance_Ratio$test_statistic,
+            Runs_Test = test_results[[year_str]]$Runs_Test$statistic,
+            Bartels_Test = test_results[[year_str]]$Bartels_Test$statistic,
+            Hurst_Exponent = test_results[[year_str]]$Hurst_Exponent$Hs,
+            Auto_VR_Test = test_results[[year_str]]$Auto_VR_Test$stat
+        )
+    } else {
+        # If no data for the year, store NA
+        test_statistic_list[[year_str]] <- rep(NA, 9)
+    }
+}
+
+# Convert the list to a dataframe
+test_statistic_df <- as.data.frame(do.call(rbind, test_statistic_list))
+
+# Set row names as years
+rownames(test_statistic_df) <- names(test_statistic_list)
+
+# Print the final dataframe
+print(test_statistic_df["2020", ])
+
+write.csv(test_statistic_df, file = "bitcoin_test_statistics_yearly.csv", row.names = TRUE)
+
+
+test_statistic_df
+
+
+
+# Trump election
+
+# Define custom date ranges
+date_ranges <- list(
+    "2024-11-06_to_2024-12-05" = c(as.Date("2024-10-06"), as.Date("2024-11-05")),
+    "2024-12-06_to_2025-01-05" = c(as.Date("2024-11-06"), as.Date("2024-12-05")),
+    "2025-01-06_to_2025-02-05" = c(as.Date("2024-12-06"), as.Date("2025-01-05"))
+)
+
+
+# Initialize result lists
+test_results <- list()
+p_values_list <- list()
+test_statistic_list <- list()
+
+# Loop over the three custom date ranges
+for (name in names(date_ranges)) {
+    start_date <- date_ranges[[name]][1]
+    end_date <- date_ranges[[name]][2]
+
+    subset_data <- subset(data, date >= start_date & date <= end_date)
+
+    if (nrow(subset_data) > 1) {
+        subset_data$return <- c(NA, diff(log(subset_data$close)))
+        returns <- na.omit(subset_data$return)
+
+        test_results[[name]] <- list(
+            Ljung_Box = Box.test(returns, lag = min(floor(log(length(returns))), length(returns) - 1), type = "Ljung-Box", fitdf = 0),
+            Auto_Q = tryCatch(Auto.Q(returns), error = function(e) NA),
+            ADF = adf.test(returns),
+            KPSS = kpss.test(returns, null = "Trend", lshort = TRUE),
+            Variance_Ratio = variance_ratio_test(subset_data$close, 3),
+            Runs_Test = runs.test(factor(returns > mean(returns))),
+            Bartels_Test = BartelsRankTest(returns, alternative = "two.sided", method = "normal"),
+            Hurst_Exponent = tryCatch(hurstexp(returns), error = function(e) NA),
+            Auto_VR_Test = tryCatch(
+                {
+                    vr_stat <- Auto.VR(returns)$stat
+                    list(stat = vr_stat, p_value = pnorm(vr_stat, lower.tail = FALSE))
+                },
+                error = function(e) list(stat = NA, p_value = NA)
+            )
+        )
+
+        # Extract p-values
+        p_values_list[[name]] <- c(
+            Ljung_Box = test_results[[name]]$Ljung_Box$p.value,
+            Auto_Q = test_results[[name]]$Auto_Q$Pvalue,
+            ADF = test_results[[name]]$ADF$p.value,
+            KPSS = test_results[[name]]$KPSS$p.value,
+            Variance_Ratio = test_results[[name]]$Variance_Ratio$p_value,
+            Runs_Test = test_results[[name]]$Runs_Test$p.value,
+            Bartels_Test = test_results[[name]]$Bartels_Test$p.value,
+            Hurst_Exponent = test_results[[name]]$Hurst_Exponent$Hs,
+            Auto_VR_Test = test_results[[name]]$Auto_VR_Test$p_value
+        )
+
+        # Extract test statistics
+        test_statistic_list[[name]] <- c(
+            Ljung_Box = test_results[[name]]$Ljung_Box$statistic,
+            Auto_Q = test_results[[name]]$Auto_Q$Stat,
+            ADF = test_results[[name]]$ADF$statistic,
+            KPSS = test_results[[name]]$KPSS$statistic,
+            Variance_Ratio = test_results[[name]]$Variance_Ratio$test_statistic,
+            Runs_Test = test_results[[name]]$Runs_Test$statistic,
+            Bartels_Test = test_results[[name]]$Bartels_Test$statistic,
+            Hurst_Exponent = test_results[[name]]$Hurst_Exponent$Hs,
+            Auto_VR_Test = test_results[[name]]$Auto_VR_Test$stat
+        )
+    } else {
+        p_values_list[[name]] <- rep(NA, 9)
+        test_statistic_list[[name]] <- rep(NA, 9)
+    }
+}
+
+# Convert to dataframes
+p_values_df <- as.data.frame(do.call(rbind, p_values_list))
+test_statistic_df <- as.data.frame(do.call(rbind, test_statistic_list))
+
+# Write to CSV
+write.csv(p_values_df, "bitcoin_p_values_election.csv", row.names = TRUE)
+write.csv(test_statistic_df, file = "bitcoin_test_statistics_election.csv", row.names = TRUE)
+
+# Show result
+print(p_values_df)
+print(test_statistic_df)
