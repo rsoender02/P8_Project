@@ -6,7 +6,7 @@ library(DescTools)
 library(lmtest)
 library(tidyverse)
 
-data <- read.csv("R/data/btc_prices.csv")
+data <- read.csv("path to file.csv")
 data$ticker <- rep("BTC", nrow(data))
 data$date <- as.Date(data$date)
 data$return <- c(NA, diff(log(data$close)))
