@@ -5,7 +5,7 @@
 - Mikkel Nørgaard
 - Rasmus Sønder
 
-### Date: May 21st 2024
+### Date: 20th of May 2024
 
 ****
 
