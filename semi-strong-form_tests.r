@@ -10,15 +10,15 @@ library(MASS)
 # Use either of (1), (2), (3), or (4)
 
 # (1) Constant-mean-return model
-data <- read.csv("R/data/btc_prices.csv")
+data <- read.csv("path to file.csv")
 data$date <- as.Date(data$date)
 data$return <- c(NA, diff(log(data$close)))
 event_date <- as.Date("2024-11-06")
 
 # (2) SP500
-data <- read.csv("R/data/btc_prices.csv")
+data <- read.csv("path to file.csv")
 data$date <- as.Date(data$date)
-data_market <- read.csv("R/data/sp500_prices.csv")
+data_market <- read.csv("path to file")
 data_market$date <- as.Date(data_market$date)
 data <- data %>% semi_join(data_market, by = "date")
 data$return <- c(NA, diff(log(data$close)))
@@ -26,9 +26,9 @@ data_market$return <- c(NA, diff(log(data_market$close)))
 event_date <- as.Date("2024-11-06")
 
 # (3) CRYPTOCAP_TOTAL2
-data <- read.csv("R/data/btc_prices.csv")
+data <- read.csv("path to file")
 data$date <- as.Date(data$date)
-data_market <- read.csv("R/data/CRYPTOCAP_TOTAL2, 1D.csv")
+data_market <- read.csv("path to file")
 names(data_market)[names(data_market) == "time"] <- "date"
 data_market$date <- as.Date(data_market$date)
 data$return <- c(NA, diff(log(data$close)))
@@ -36,10 +36,10 @@ data_market$return <- c(NA, diff(log(data_market$close)))
 event_date <- as.Date("2024-11-06")
 
 # (4) CAPM model - use either SP500 or CRYPTOCAP_TOTAL2
-data_market <- read.csv("R/data/sp500_prices.csv")
-data_market <- read.csv("R/data/CRYPTOCAP_TOTAL2, 1D.csv")
+data_market <- read.csv("path to file")
+data_market <- read.csv("path to file")
 
-data <- read.csv("R/data/btc_prices.csv")
+data <- read.csv("path to file")
 data$date <- as.Date(data$date)
 risk_free <- 0.04039 / 252
 data_market$date <- as.Date(data_market$date)
@@ -350,7 +350,7 @@ for (i in (seq_along(end_dates))) {
 
 # 5. Inspect the table of results
 print(results)
-write.csv(results, file = "bitcoin_eventstudy_results_market_1day.csv", row.names = FALSE)
+write.csv(results, file = "bitcoin_eventstudy_results_market_right_extended.csv", row.names = FALSE)
 
 
 
