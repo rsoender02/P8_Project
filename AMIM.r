@@ -6,7 +6,7 @@
   start_date <- as.Date("2014-01-01")
   end_date <- as.Date("2025-03-31")
   symbol <- "BTC-USD"
-  output_file <- "X:/Credit Risk/MN/P8/btc_prices.csv"
+  output_file <- "path to file"
 
   # Get historical data and check for errors
   data <- try(getSymbols(symbol, src = "yahoo", from = start_date, to = end_date, auto.assign = FALSE))
@@ -110,7 +110,7 @@
   }
 
   library(ggplot2)
-  data <- read.csv("X:/Credit Risk/MN/P8/btc_prices.csv")
+  data <- read.csv("path to file")
   data$ticker <- rep("BTC", nrow(data))
   data$date <- as.Date(data$date)
 
@@ -174,7 +174,7 @@ AMIM <- na.omit(AMIM)
   )
   ggsave("number_of_lags_used_365_no_force.png", plot = p, width = 10, height = 4, dpi = 300)
 
-write.csv(AMIM, "X:/Credit Risk/MN/P8/amim_365_data_force.csv", row.names = FALSE)
+write.csv(AMIM, "path to file", row.names = FALSE)
 
   p <- ggplot(AMIM, aes(x = date, y = moving_avg)) +
     geom_line(color = "#211A52") +
@@ -296,7 +296,7 @@ AMIM <- na.omit(AMIM)
   )
   ggsave("number_of_lags_used_60_force.png", plot = p, width = 10, height = 4, dpi = 300)
 
-write.csv(AMIM, "X:/Credit Risk/MN/P8/amim_365_data_force.csv", row.names = FALSE)
+write.csv(AMIM, "path to file", row.names = FALSE)
 
 # Get min and max for each series
 amim_min <- min(AMIM$AMIM, na.rm = TRUE)
